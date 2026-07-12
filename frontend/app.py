@@ -10,8 +10,8 @@ import requests
 import pandas as pd
 import streamlit as st
 
-API_URL = "http://localhost:8007/predict"
-HEALTH_URL = "http://localhost:8007/health"
+API_URL = "https://fraud-detection-system-h6ct.onrender.com/predict"
+HEALTH_URL = "https://fraud-detection-system-h6ct.onrender.com/health"
 
 V_FIELDS = [f"V{i}" for i in range(1, 29)]
 FEATURE_ORDER = ["Time"] + V_FIELDS + ["Amount"]
