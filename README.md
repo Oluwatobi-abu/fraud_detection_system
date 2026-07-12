@@ -7,6 +7,14 @@ predictions, and a Streamlit frontend for manual and batch (CSV) scoring.
 Dataset: [Credit Card Fraud Detection (mlg-ulb) — Kaggle](https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud)
 284,807 European card transactions, 492 of which (0.17%) are fraudulent.
 
+## 🔗 Live Demo
+
+Try it here: **[frauddetectionsystem-h5kiuh3cq6lpcdhywjk2an.streamlit.app](https://frauddetectionsystem-h5kiuh3cq6lpcdhywjk2an.streamlit.app)**
+
+Backend deployed on Render, frontend on Streamlit Community Cloud.
+
+> **Note:** the backend runs on Render's free tier, which spins down after inactivity. The first prediction after idle time may take 30–60 seconds while it wakes up — this is expected, not a bug.
+
 ## Project Structure
 
 ```
