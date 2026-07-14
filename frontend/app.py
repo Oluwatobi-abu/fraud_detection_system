@@ -7,6 +7,7 @@ Run with:
 """
 
 import requests
+import time
 import pandas as pd
 import streamlit as st
 
@@ -49,10 +50,20 @@ mode = st.radio("Choose input mode:", ["Manual Entry", "CSV Upload"], horizontal
 st.divider()
 
 
-def call_predict_api(payload: dict) -> dict:
-    response = requests.post(API_URL, json=payload, timeout=30)
-    response.raise_for_status()
-    return response.json()
+def call_predict_api(payload: dict, retries: int = 2, backoff_seconds: int = 5) -> dict:
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            response = requests.post(API_URL, json=payload, timeout=30)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.ConnectionError as e:
+            # Render's free tier can briefly refuse connections while waking up
+            # from a cold start. Retry a couple of times before giving up.
+            last_error = e
+            if attempt < retries:
+                time.sleep(backoff_seconds)
+    raise last_error
 
 
 # ------------------------------------------------------------------
@@ -80,7 +91,7 @@ if mode == "Manual Entry":
     if submitted:
         payload = {"Time": time_val, **v_values, "Amount": amount_val}
         try:
-            with st.spinner("Scoring transaction..."):
+            with st.spinner("Scoring transaction... (backend may be waking up, this can take up to a minute)"):
                 result = call_predict_api(payload)
 
             if result["prediction"] == 1:
@@ -91,7 +102,7 @@ if mode == "Manual Entry":
             st.progress(min(max(result["probability"], 0.0), 1.0))
 
         except requests.exceptions.ConnectionError:
-            st.error("Could not reach the backend. Is it running on port 8007?")
+            st.error("Backend didn't respond after a few retries. It may still be waking up — please try Predict again.")
         except requests.exceptions.HTTPError as e:
             st.error(f"Backend rejected the request: {e.response.text}")
         except Exception as e:
