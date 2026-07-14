@@ -2,9 +2,6 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 
-# Trained model artifacts (regenerate via notebook — don't commit binaries)
-backend/fraud_model.pkl
-backend/scaler.pkl
 
 # Dataset (download from Kaggle, don't commit large data files)
 notebook/creditcard.csv

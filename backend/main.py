@@ -13,9 +13,11 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
+from xgboost import XGBClassifier
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "fraud_model.pkl")
+MODEL_JSON_PATH = os.path.join(BASE_DIR, "fraud_model.json")
+MODEL_PKL_PATH = os.path.join(BASE_DIR, "fraud_model.pkl")
 SCALER_PATH = os.path.join(BASE_DIR, "scaler.pkl")
 
 app = FastAPI(
@@ -42,13 +44,27 @@ FEATURE_ORDER = ["Time"] + V_FIELDS + ["Amount"]
 @app.on_event("startup")
 def load_artifacts():
     global model, scaler
-    if not os.path.exists(MODEL_PATH) or not os.path.exists(SCALER_PATH):
+    if not os.path.exists(SCALER_PATH):
         raise RuntimeError(
-            "Model artifacts not found. Run notebook/fraud_training.ipynb first, "
-            "then copy fraud_model.pkl and scaler.pkl into the backend/ folder."
+            "scaler.pkl not found. Run notebook/fraud_training.ipynb first, "
+            "then copy scaler.pkl into the backend/ folder."
         )
-    model = joblib.load(MODEL_PATH)
     scaler = joblib.load(SCALER_PATH)
+
+    if os.path.exists(MODEL_JSON_PATH):
+        # Preferred: XGBoost's native, version-stable format (no pickle compatibility warnings)
+        loaded = XGBClassifier()
+        loaded.load_model(MODEL_JSON_PATH)
+        model = loaded
+    elif os.path.exists(MODEL_PKL_PATH):
+        # Fallback: joblib/pickle (used when the selected best model isn't XGBoost,
+        # e.g. Logistic Regression or Random Forest)
+        model = joblib.load(MODEL_PKL_PATH)
+    else:
+        raise RuntimeError(
+            "No model file found (expected fraud_model.json or fraud_model.pkl). "
+            "Run notebook/fraud_training.ipynb first, then copy the model file into backend/."
+        )
 
 
 class Transaction(BaseModel):
