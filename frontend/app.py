@@ -10,8 +10,8 @@ import requests
 import pandas as pd
 import streamlit as st
 
-API_URL = "https://fraud-detection-system-h6ct.onrender.com/predict"
-HEALTH_URL = "https://fraud-detection-system-h6ct.onrender.com/health"
+API_URL = "http://localhost:8007/predict"
+HEALTH_URL = "http://localhost:8007/health"
 
 V_FIELDS = [f"V{i}" for i in range(1, 29)]
 FEATURE_ORDER = ["Time"] + V_FIELDS + ["Amount"]
@@ -25,13 +25,16 @@ st.caption("Real-time and batch fraud scoring, backed by a FastAPI model-serving
 with st.sidebar:
     st.header("Backend Status")
     try:
-        health = requests.get(HEALTH_URL, timeout=3).json()
+        health = requests.get(HEALTH_URL, timeout=15).json()
         if health.get("model_loaded") and health.get("scaler_loaded"):
             st.success("Connected — model & scaler loaded")
         else:
             st.warning("Backend reachable but model/scaler not loaded")
     except requests.exceptions.RequestException:
-        st.error("Backend not reachable at localhost:8007.\nStart it with:\n\n`uvicorn main:app --reload --port 8007`")
+        st.warning(
+            "Backend is waking up (free-tier hosting spins down when idle). "
+            "This can take 30–60 seconds — try Predict below, or refresh in a moment."
+        )
 
     st.divider()
     st.markdown(
@@ -47,7 +50,7 @@ st.divider()
 
 
 def call_predict_api(payload: dict) -> dict:
-    response = requests.post(API_URL, json=payload, timeout=10)
+    response = requests.post(API_URL, json=payload, timeout=30)
     response.raise_for_status()
     return response.json()
 
