@@ -50,7 +50,10 @@ mode = st.radio("Choose input mode:", ["Manual Entry", "CSV Upload"], horizontal
 st.divider()
 
 
-def call_predict_api(payload: dict, retries: int = 5, backoff_seconds: int = 8) -> dict:
+def call_predict_api(payload: dict, retries: int = 12, backoff_seconds: int = 10) -> dict:
+    # A refused connection fails instantly (it does NOT consume the request
+    # timeout), so the real wait time here is retries * backoff_seconds =
+    # 12 * 10 = 120 seconds, matching Render's free-tier cold-start window.
     last_error = None
     for attempt in range(retries + 1):
         try:
@@ -58,9 +61,6 @@ def call_predict_api(payload: dict, retries: int = 5, backoff_seconds: int = 8) 
             response.raise_for_status()
             return response.json()
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
-            # Render's free tier can refuse or drop connections for a stretch
-            # while a cold instance is starting up, even after /health responds.
-            # Retry with real spacing rather than giving up quickly.
             last_error = e
             if attempt < retries:
                 time.sleep(backoff_seconds)
@@ -92,7 +92,7 @@ if mode == "Manual Entry":
     if submitted:
         payload = {"Time": time_val, **v_values, "Amount": amount_val}
         try:
-            with st.spinner("Scoring transaction... (backend may be waking up, this can take up to a minute)"):
+            with st.spinner("Scoring transaction... backend may be cold-starting (Render free tier), this can take up to 2 minutes"):
                 result = call_predict_api(payload)
 
             if result["prediction"] == 1:
