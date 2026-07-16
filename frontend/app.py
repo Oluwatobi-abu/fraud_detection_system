@@ -50,16 +50,17 @@ mode = st.radio("Choose input mode:", ["Manual Entry", "CSV Upload"], horizontal
 st.divider()
 
 
-def call_predict_api(payload: dict, retries: int = 2, backoff_seconds: int = 5) -> dict:
+def call_predict_api(payload: dict, retries: int = 5, backoff_seconds: int = 8) -> dict:
     last_error = None
     for attempt in range(retries + 1):
         try:
             response = requests.post(API_URL, json=payload, timeout=30)
             response.raise_for_status()
             return response.json()
-        except requests.exceptions.ConnectionError as e:
-            # Render's free tier can briefly refuse connections while waking up
-            # from a cold start. Retry a couple of times before giving up.
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+            # Render's free tier can refuse or drop connections for a stretch
+            # while a cold instance is starting up, even after /health responds.
+            # Retry with real spacing rather than giving up quickly.
             last_error = e
             if attempt < retries:
                 time.sleep(backoff_seconds)
@@ -101,8 +102,8 @@ if mode == "Manual Entry":
 
             st.progress(min(max(result["probability"], 0.0), 1.0))
 
-        except requests.exceptions.ConnectionError:
-            st.error("Backend didn't respond after a few retries. It may still be waking up — please try Predict again.")
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+            st.error("Backend is taking longer than usual to wake up (can happen on Render's free tier). Please wait 30 seconds and try Predict again.")
         except requests.exceptions.HTTPError as e:
             st.error(f"Backend rejected the request: {e.response.text}")
         except Exception as e:
