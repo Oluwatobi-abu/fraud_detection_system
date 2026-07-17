@@ -11,8 +11,8 @@ import time
 import pandas as pd
 import streamlit as st
 
-API_URL = "http://localhost:8007/predict"
-HEALTH_URL = "http://localhost:8007/health"
+API_URL = "https://fraud-detection-system-h6ct.onrender.com/predict"
+HEALTH_URL = "https://fraud-detection-system-h6ct.onrender.com/health"
 
 V_FIELDS = [f"V{i}" for i in range(1, 29)]
 FEATURE_ORDER = ["Time"] + V_FIELDS + ["Amount"]
@@ -103,7 +103,7 @@ if mode == "Manual Entry":
             st.progress(min(max(result["probability"], 0.0), 1.0))
 
         except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
-            st.error("Backend is taking longer than usual to wake up (can happen on Render's free tier). Please wait 30 seconds and try Predict again.")
+            st.error("Backend didn't wake up within 2 minutes. This is unusual — please try Predict again, or check that the Render service is running.")
         except requests.exceptions.HTTPError as e:
             st.error(f"Backend rejected the request: {e.response.text}")
         except Exception as e:
